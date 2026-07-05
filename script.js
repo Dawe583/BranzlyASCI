@@ -5,6 +5,7 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let lenis = null;
 if (!reduceMotion && typeof Lenis !== "undefined") {
   lenis = new Lenis({ lerp: 0.09, smoothWheel: true });
+  window.__lenis = lenis; // pro enhance.js (marquee reagující na rychlost scrollu)
   // kotvy přes Lenis (plynulý dojezd)
   document.querySelectorAll('a[href^="#"]').forEach((a) => {
     a.addEventListener("click", (e) => {
@@ -158,8 +159,17 @@ function noise(x, y, t) {
   return 0.5 + 0.5 * Math.sin(x * 12.9 + t * 0.7) * Math.cos(y * 9.7 - t * 0.5);
 }
 
-/* hero: dvě ruce/laloky natahující se k sobě */
+/* hero: dvě ruce/laloky natahující se k sobě + ripple kolem kurzoru */
 const heroCanvas = document.getElementById("asciiHero");
+const heroPtr = { x: -9, y: -9 };
+if (heroCanvas) {
+  heroCanvas.addEventListener("pointermove", (e) => {
+    const r = heroCanvas.getBoundingClientRect();
+    heroPtr.x = (e.clientX - r.left) / r.width;
+    heroPtr.y = (e.clientY - r.top) / r.height;
+  });
+  heroCanvas.addEventListener("pointerleave", () => { heroPtr.x = -9; heroPtr.y = -9; });
+}
 if (heroCanvas) asciiRender(heroCanvas, (x, y, t) => {
   const wob = 0.015 * Math.sin(t * 0.8 + y * 6);
   let v = 0;
@@ -171,21 +181,42 @@ if (heroCanvas) asciiRender(heroCanvas, (x, y, t) => {
   v = Math.max(v, lobe(x, y, 0.76 - wob, 0.42, 0.22, 0.32));
   v = Math.max(v, lobe(x, y, 0.58 - wob, 0.50, 0.09, 0.06));
   v = Math.max(v, lobe(x, y, 0.61 - wob, 0.38, 0.07, 0.05));
-  return v * (0.55 + 0.45 * noise(x, y, t));
+  v *= 0.55 + 0.45 * noise(x, y, t);
+  // rozvlnění znaků kolem kurzoru
+  if (heroPtr.x > -1) {
+    const d = Math.hypot(x - heroPtr.x, (y - heroPtr.y) * 0.5);
+    if (d < 0.3) v += 0.45 * Math.exp(-d * 12) * Math.sin(d * 44 - t * 7);
+  }
+  return v;
 }, true);
 
-/* průsečík: digitální lalok zleva, "lidský" zprava, dotýkají se uprostřed */
+/* průsečík: digitální lalok zleva, "lidský" zprava.
+   __meet.p řídí sblížení rukou (0 = daleko, 1 = dotek) — skrolluje enhance.js.
+   Při doteku se od středu rozběhne kruhová vlna. */
+const MEET = (window.__meet = { p: 1, touchT: -1 });
 const meetCanvas = document.getElementById("asciiMeet");
 if (meetCanvas) asciiRender(meetCanvas, (x, y, t) => {
   const wob = 0.012 * Math.sin(t + y * 5);
+  const sep = 0.14 * (1 - MEET.p); // rozestup rukou podle progresu
   let v = 0;
-  v = Math.max(v, lobe(x, y, 0.16, 0.42 + wob, 0.26, 0.34));
-  v = Math.max(v, lobe(x, y, 0.42, 0.52 + wob, 0.10, 0.06));
-  v = Math.max(v, lobe(x, y, 0.86, 0.55 - wob, 0.26, 0.36));
-  v = Math.max(v, lobe(x, y, 0.58, 0.50 - wob, 0.10, 0.06));
+  v = Math.max(v, lobe(x, y, 0.16 - sep, 0.42 + wob, 0.26, 0.34));
+  v = Math.max(v, lobe(x, y, 0.42 - sep, 0.52 + wob, 0.10, 0.06));
+  v = Math.max(v, lobe(x, y, 0.86 + sep, 0.55 - wob, 0.26, 0.36));
+  v = Math.max(v, lobe(x, y, 0.58 + sep, 0.50 - wob, 0.10, 0.06));
   // pravá strana hladší (lidská), levá zrnitější (digitální)
   const grain = x < 0.5 ? noise(x, y, t) : 0.85;
-  return v * (0.5 + 0.5 * grain);
+  v *= 0.5 + 0.5 * grain;
+  // puls při dotyku (jednorázová vlna, znovu se nabije při odscrollování)
+  if (MEET.p > 0.985 && MEET.touchT < 0) MEET.touchT = t;
+  if (MEET.p < 0.9) MEET.touchT = -1;
+  if (MEET.touchT > 0) {
+    const tr = t - MEET.touchT;
+    if (tr < 2.5) {
+      const d = Math.hypot(x - 0.5, (y - 0.5) * 0.36);
+      v += 0.8 * Math.sin(d * 46 - tr * 9) * Math.exp(-d * 6) * Math.exp(-tr * 1.7);
+    }
+  }
+  return v;
 }, true);
 
 /* footer: vztyčená paže s pochodní (statická silueta) */
@@ -350,6 +381,7 @@ if (calEl) {
       <a href="mailto:ahoj@branzly.cz?subject=Rezervace konzultace 16:00">16:00</a>
     </div>`;
     calEl.innerHTML = html;
+    calEl.dispatchEvent(new CustomEvent("branzly:cal")); // pro enhance.js (stagger dnů)
     document.getElementById("calPrev").onclick = () => { view.setMonth(view.getMonth() - 1); renderCal(); };
     document.getElementById("calNext").onclick = () => { view.setMonth(view.getMonth() + 1); renderCal(); };
   }

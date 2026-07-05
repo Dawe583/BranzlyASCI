@@ -17,6 +17,9 @@
 /* ===== HERO — split text (anime.js) ===== */
 .pre-anim .load { animation: none !important; opacity: 0; }
 .pre-anim .hero h1.load { opacity: 0; }
+/* když řídí anime.js, CSS load-in animace se vypne (fill:forwards by
+   jinak přebíjelo inline styly z JS — hero intro i exit scrub) */
+.anim-live .load { animation: none !important; }
 .hero h1 .wd { display: inline-block; }
 .hero h1 .ch { display: inline-block; will-change: transform, opacity, filter; }
 
@@ -142,12 +145,101 @@
 }
 .area-x span { font-size: 11px; color: var(--gray-4); font-variant-numeric: tabular-nums; }
 
+/* ===== NADPISY — splitText masky (vlna 2) ===== */
+h3.no-reveal {
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+/* ===== PRŮSEČÍK — anotace se ukážou až při doteku rukou ===== */
+.intersection-visual.meet-scrub .annot-line { transition: transform 0.7s var(--ease); }
+.intersection-visual.meet-scrub .annot-text { transition: opacity 0.5s var(--ease) 0.3s; }
+.intersection-visual.meet-scrub:not(.meet-touched) .annot-line { transform: scaleY(0) !important; }
+.intersection-visual.meet-scrub:not(.meet-touched) .annot-text { opacity: 0 !important; }
+
+/* ===== MARQUEE — náklon podle rychlosti scrollu ===== */
+.marquee { will-change: transform; }
+
+/* ===== ORBIT 2.0 ===== */
+.orbit-live { cursor: grab; touch-action: pan-y; user-select: none; }
+.orbit-live:active { cursor: grabbing; }
+.orbit-live .orbit-node {
+  animation: none;
+  translate: none;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  z-index: 2;
+}
+.orbit-live .orbit-node:hover {
+  border-color: var(--ink);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.1);
+  z-index: 3;
+}
+.orbit-links {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+.orbit-link {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 0.5;
+  stroke-dasharray: 1.8 1.4;
+  opacity: 0.85;
+}
+.orbit-packet { fill: var(--blue); }
+
+/* ===== CENÍK — kreslená linka fází ===== */
+.tier-stack { position: relative; }
+.tier-line {
+  position: absolute;
+  inset: -20px 0;
+  width: 100%;
+  height: calc(100% + 40px);
+  pointer-events: none;
+  z-index: 0;
+}
+.tier-line path {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1.5px;
+  stroke-dasharray: 5 5;
+}
+.tier-row { position: relative; z-index: 1; }
+
+/* ===== KALENDÁŘ — hover pop dnů ===== */
+.cal-day { transition: background 0.15s, transform 0.18s var(--ease); }
+a.cal-day:hover { transform: scale(1.14); }
+
+/* ===== PŘÍPADOVKY — tilt (vypnout CSS transition na transform) ===== */
+.case { transition: background 0.25s var(--ease), box-shadow 0.3s var(--ease); will-change: transform; }
+
+/* ===== STAT DLAŽDICE — glow za kurzorem ===== */
+.stat-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.35s;
+  background: radial-gradient(150px circle at var(--gx, 50%) var(--gy, 50%), rgba(52, 85, 250, 0.09), transparent 70%);
+  pointer-events: none;
+}
+.stat-tile:hover::before { opacity: 1; }
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
   .results-viz { padding: 22px 18px 26px; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .viz-split { grid-template-columns: 1fr; gap: 28px; }
   .ring-wrap canvas { width: 190px; height: 190px; }
+  .tier-line { display: none; }
 }
 @media (max-width: 460px) {
   .stat-grid { grid-template-columns: 1fr; }
