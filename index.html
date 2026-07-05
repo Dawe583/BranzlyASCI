@@ -12,8 +12,18 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,400;6..144,500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="enhance.css" />
+  <!-- skryjeme hero jen když poběží JS orchestrace (jinak nechá CSS load-in) -->
+  <script>
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.documentElement.classList.add("pre-anim");
+    }
+  </script>
 </head>
 <body>
+
+  <!-- indikátor progresu scrollu -->
+  <div class="scroll-prog" id="scrollProg" aria-hidden="true"></div>
 
   <!-- ===== NAV (logo uprostřed, odkazy v závorkách) ===== -->
   <header class="nav-wrap" id="top">
@@ -252,6 +262,92 @@
         </article>
       </div>
 
+      <!-- ===== METRIKY NASAZENÍ (bklit-styl data-viz) ===== -->
+      <div class="results-viz reveal" id="resultsViz">
+        <div class="rv-head">
+          <span class="chip-black chip-corners">Dopad nasazení<i class="c c1"></i><i class="c c2"></i><i class="c c3"></i><i class="c c4"></i></span>
+          <span class="rv-note">Agregováno napříč nasazeními · posledních 6 měsíců</span>
+        </div>
+
+        <!-- statistické dlaždice s count-up -->
+        <div class="stat-grid">
+          <div class="stat-tile">
+            <span class="stat-num" data-count="96" data-suf="%">0%</span>
+            <span class="stat-lab">Úspora času zpracování</span>
+            <span class="stat-sub">z 48 h na 11 min</span>
+          </div>
+          <div class="stat-tile">
+            <span class="stat-num" data-count="80" data-suf="%">0%</span>
+            <span class="stat-lab">Úkolů L1 vyřešeno agentem</span>
+            <span class="stat-sub">bez lidského zásahu</span>
+          </div>
+          <div class="stat-tile">
+            <span class="stat-num" data-count="4" data-suf="×">0×</span>
+            <span class="stat-lab">Rychlejší nasazení</span>
+            <span class="stat-sub">oproti klasické integraci</span>
+          </div>
+          <div class="stat-tile">
+            <span class="stat-num" data-count="99.9" data-dec="1" data-suf="%">0%</span>
+            <span class="stat-lab">Dostupnost API a agentů</span>
+            <span class="stat-sub">měřená SLA za kvartál</span>
+          </div>
+        </div>
+
+        <!-- graf + legenda -->
+        <div class="viz-split">
+          <figure class="ring-wrap">
+            <canvas id="ringChart" width="440" height="440" aria-hidden="true"></canvas>
+            <figcaption>Rozložení řešení dotazů</figcaption>
+          </figure>
+
+          <!-- bklit-styl legenda s markery a progress bary -->
+          <ul class="viz-legend" aria-label="Pokrytí automatizace podle oblasti">
+            <li class="lg-item" data-val="82" style="--mk:#2f9bff">
+              <span class="lg-marker"></span>
+              <span class="lg-label">Zákaznická podpora</span>
+              <span class="lg-value">82<em>%</em></span>
+              <span class="lg-progress"><i class="lg-fill"></i></span>
+            </li>
+            <li class="lg-item" data-val="71" style="--mk:#2fd0a4">
+              <span class="lg-marker"></span>
+              <span class="lg-label">Datové pipeline</span>
+              <span class="lg-value">71<em>%</em></span>
+              <span class="lg-progress"><i class="lg-fill"></i></span>
+            </li>
+            <li class="lg-item" data-val="64" style="--mk:#e935e0">
+              <span class="lg-marker"></span>
+              <span class="lg-label">Interní reporting</span>
+              <span class="lg-value">64<em>%</em></span>
+              <span class="lg-progress"><i class="lg-fill"></i></span>
+            </li>
+            <li class="lg-item" data-val="48" style="--mk:#f5a623">
+              <span class="lg-marker"></span>
+              <span class="lg-label">Zpracování dokumentů</span>
+              <span class="lg-value">48<em>%</em></span>
+              <span class="lg-progress"><i class="lg-fill"></i></span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- křivka doby zpracování (kreslená přes anime.js svg.createDrawable) -->
+        <figure class="area-wrap">
+          <figcaption>Průměrná doba zpracování zakázky (h)</figcaption>
+          <svg id="areaChart" class="area-chart" viewBox="0 0 620 200" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#3455fa" stop-opacity="0.18" />
+                <stop offset="1" stop-color="#3455fa" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            <g class="ac-grid"></g>
+            <path class="ac-area" fill="url(#areaGrad)" />
+            <path class="ac-line" fill="none" stroke="#3455fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <g class="ac-dots"></g>
+          </svg>
+          <div class="area-x" id="areaX"></div>
+        </figure>
+      </div>
+
       <figure class="big-quote reveal">
         <!-- TODO: sem patří skutečný portrét (foto) -->
         <canvas class="quote-photo" data-seed="42" width="240" height="240" aria-label="Portrét Kateřiny Machové"></canvas>
@@ -364,5 +460,20 @@
 
   <script src="https://unpkg.com/lenis@1/dist/lenis.min.js"></script>
   <script src="script.js"></script>
+  <!-- anime.js orchestrace a data-viz (ESM modul, plná v4) -->
+  <script type="module" src="enhance.js"></script>
+  <!-- záchranná síť: kdyby se modul/CDN nenačetl, hero i tak odkryjeme -->
+  <script>
+    addEventListener("load", function () {
+      setTimeout(function () {
+        if (!window.__branzlyAnim) {
+          document.documentElement.classList.remove("pre-anim");
+          document.querySelectorAll(".load").forEach(function (el) {
+            el.style.opacity = "1"; el.style.filter = "none"; el.style.transform = "none";
+          });
+        }
+      }, 1400);
+    });
+  </script>
 </body>
 </html>
